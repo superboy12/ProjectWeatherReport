@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="id" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro Weather Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { colors: { primary: '#3b82f6' } } }
+        }
+    </script>
+    <style>
+        .loader {
+            border-top-color: #3b82f6;
+            -webkit-animation: spinner 1.5s linear infinite;
+            animation: spinner 1.5s linear infinite;
+        }
+        @keyframes spinner {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-slate-900 text-gray-800 dark:text-gray-100 transition-colors duration-300 font-sans min-h-screen flex flex-col">
+
+    <nav class="bg-white dark:bg-slate-800 shadow-sm border-b dark:border-slate-700 p-4 sticky top-0 z-50">
+        <div class="container mx-auto flex flex-col xl:flex-row justify-between items-center gap-4">
+            
+            <div class="flex items-center gap-2 self-start xl:self-center">
+                <div class="bg-blue-100 dark:bg-slate-700 p-2 rounded-lg">
+                    <i class="fa-solid fa-map-location-dot text-2xl text-blue-600 dark:text-blue-400"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight leading-none">Indo<span class="text-blue-600 dark:text-blue-400">Weather</span></h1>
+                    <p class="text-[10px] text-gray-500 font-medium">VOICE ENABLED</p>
+                </div>
+            </div>
+
+            <div class="flex flex-col md:flex-row gap-2 w-full xl:w-auto bg-gray-50 dark:bg-slate-700/50 p-2 rounded-xl border dark:border-slate-600">
+                <div class="relative w-full md:w-56">
+                    <select id="inputProv" onchange="handleProvinceChange()" 
+                        class="w-full pl-9 pr-8 py-2 rounded-lg border dark:border-slate-600 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 text-sm shadow-sm appearance-none cursor-pointer">
+                        <option value="">Pilih Provinsi...</option>
+                    </select>
+                    <i class="fa-solid fa-map absolute left-3 top-2.5 text-gray-400 text-xs"></i>
+                    <i class="fa-solid fa-chevron-down absolute right-3 top-3 text-gray-400 text-xs pointer-events-none"></i>
+                </div>
+
+                <div class="relative w-full md:w-56">
+                    <select id="inputCity" disabled
+                        class="w-full pl-9 pr-8 py-2 rounded-lg border dark:border-slate-600 bg-gray-200 dark:bg-slate-900 focus:ring-2 focus:ring-blue-500 text-sm shadow-sm appearance-none transition cursor-not-allowed">
+                        <option value="">Pilih Kota...</option>
+                    </select>
+                    <i class="fa-solid fa-city absolute left-3 top-2.5 text-gray-400 text-xs"></i>
+                    <i class="fa-solid fa-chevron-down absolute right-3 top-3 text-gray-400 text-xs pointer-events-none"></i>
+                </div>
+
+                <button onclick="handleSearchRegion()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg shadow-md transition font-medium text-sm flex items-center justify-center gap-2 whitespace-nowrap">
+                    <i class="fa-solid fa-magnifying-glass"></i> Cek
+                </button>
+            </div>
+
+            <div class="flex items-center gap-3 self-end xl:self-center">
+                
+                <button onclick="speakWeather()" class="h-10 w-10 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 hover:bg-indigo-200 dark:hover:bg-indigo-800 text-indigo-600 dark:text-indigo-400 transition flex items-center justify-center border border-indigo-200 dark:border-indigo-700 shadow-sm" title="Bacakan Laporan Cuaca">
+                    <i class="fa-solid fa-volume-high"></i>
+                </button>
+
+                <button onclick="toggleUnit()" class="h-10 px-3 rounded-lg bg-gray-100 dark:bg-slate-700 font-bold text-sm border dark:border-slate-600 hover:bg-gray-200 transition" id="unitBtn">°C</button>
+                <button onclick="manualRefresh()" id="refreshBtn" class="h-10 w-10 rounded-lg bg-gray-100 dark:bg-slate-700 hover:bg-blue-50 dark:hover:bg-slate-600 text-blue-600 transition flex items-center justify-center border dark:border-slate-600">
+                    <i class="fa-solid fa-arrows-rotate"></i>
+                </button>
+                <div class="relative group">
+                    <button class="h-10 w-10 rounded-lg bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 transition flex items-center justify-center border dark:border-slate-600">
+                        <i class="fa-solid fa-gear text-gray-600 dark:text-gray-300"></i>
+                    </button>
+                    <div class="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-4 hidden group-hover:block border dark:border-slate-700 z-50">
+                        <p class="text-xs font-bold text-gray-400 uppercase mb-3 tracking-wider">Auto-Update</p>
+                        <div class="space-y-2">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="interval" value="0" onchange="setUpdateInterval(0)" class="accent-blue-500"> 
+                                <span class="text-sm dark:text-gray-300">Manual</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="interval" value="0.08333" onchange="setUpdateInterval(0.08333)" class="accent-blue-500"> 
+                                <span class="text-sm dark:text-gray-300 font-bold text-blue-500">5 Detik</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="interval" value="1" onchange="setUpdateInterval(1)" class="accent-blue-500"> 
+                                <span class="text-sm dark:text-gray-300">1 Menit</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="interval" value="5" onchange="setUpdateInterval(5)" checked class="accent-blue-500"> 
+                                <span class="text-sm dark:text-gray-300">5 Menit</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="interval" value="10" onchange="setUpdateInterval(10)" class="accent-blue-500"> 
+                                <span class="text-sm dark:text-gray-300">10 Menit</span>
+                            </label>
+                        </div>
+                        <div class="h-px bg-gray-200 dark:bg-slate-700 my-3"></div>
+                        <button onclick="toggleTheme()" class="w-full flex items-center justify-between text-sm p-2 rounded hover:bg-gray-100 dark:hover:bg-slate-700 transition dark:text-gray-300">
+                            <span>Mode Gelap</span> <i id="themeIcon" class="fa-solid fa-moon"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto p-4 md:p-6 flex-grow max-w-7xl">
+        <div id="loading" class="hidden fixed inset-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm flex flex-col justify-center items-center z-50">
+            <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mb-4"></div>
+            <p class="text-sm font-semibold text-gray-500 animate-pulse" id="loadingText">Mengambil Data...</p>
+        </div>
+
+        <div id="errorMsg" class="hidden flex items-center p-4 mb-4 text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400 border border-red-200" role="alert">
+            <i class="fa-solid fa-triangle-exclamation mr-2"></i>
+            <div id="errorText" class="text-sm font-medium">Error here.</div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div class="lg:col-span-8 space-y-6">
+                <div class="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 p-8 relative overflow-hidden group">
+                    <div class="absolute -right-10 -top-10 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl group-hover:bg-blue-500/20 transition duration-500"></div>
+                    <div class="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+                        <div class="text-center md:text-left">
+                            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-slate-700 text-blue-600 dark:text-blue-400 text-xs font-bold uppercase tracking-wider mb-2">
+                                <i class="fa-solid fa-location-dot"></i> Cuaca Terkini
+                            </div>
+                            <h2 class="text-3xl md:text-5xl font-bold text-gray-800 dark:text-white mb-1" id="cityName">--</h2>
+                            <p class="text-gray-500 dark:text-gray-400 font-medium text-sm" id="currentDate">--</p>
+                            <div class="mt-6 flex items-baseline justify-center md:justify-start">
+                                <span class="text-7xl md:text-8xl font-bold tracking-tighter text-gray-900 dark:text-white" id="tempValue">--</span>
+                                <span class="text-3xl text-gray-400 ml-1" id="tempUnit">°C</span>
+                            </div>
+                            <p class="text-xl text-blue-500 font-medium capitalize mt-2 flex items-center justify-center md:justify-start gap-2">
+                                <span id="weatherDesc">--</span>
+                            </p>
+                        </div>
+                        <div class="relative">
+                            <img id="weatherIcon" src="" alt="Weather" class="w-40 h-40 md:w-48 md:h-48 object-contain drop-shadow-2xl hidden">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-4 mt-8 pt-6 border-t border-gray-100 dark:border-slate-700">
+                        <div class="text-center p-3 rounded-2xl bg-gray-50 dark:bg-slate-700/50">
+                            <i class="fa-solid fa-wind text-gray-400 mb-2"></i>
+                            <p class="text-[10px] text-gray-500 uppercase font-bold">Angin</p>
+                            <p class="text-lg font-bold text-gray-800 dark:text-white" id="windSpeed">0 m/s</p>
+                        </div>
+                        <div class="text-center p-3 rounded-2xl bg-gray-50 dark:bg-slate-700/50">
+                            <i class="fa-solid fa-droplet text-gray-400 mb-2"></i>
+                            <p class="text-[10px] text-gray-500 uppercase font-bold">Kelembapan</p>
+                            <p class="text-lg font-bold text-gray-800 dark:text-white" id="humidity">0%</p>
+                        </div>
+                        <div class="text-center p-3 rounded-2xl bg-gray-50 dark:bg-slate-700/50">
+                            <i class="fa-solid fa-eye text-gray-400 mb-2"></i>
+                            <p class="text-[10px] text-gray-500 uppercase font-bold">Jarak Pandang</p>
+                            <p class="text-lg font-bold text-gray-800 dark:text-white" id="visibility">0 km</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 bg-indigo-50 dark:bg-indigo-900/30 rounded-2xl p-5 border border-indigo-100 dark:border-indigo-800 flex items-start gap-4">
+                        <div class="bg-indigo-500 text-white p-3 rounded-full shrink-0 shadow-lg">
+                            <i id="recoIcon" class="fa-solid fa-robot text-xl"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-gray-800 dark:text-white mb-1">Rekomendasi Cerdas</h4>
+                            <p id="recoText" class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">Sedang menganalisis cuaca...</p>
+                        </div>
+                    </div>
+
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold mb-4 flex items-center gap-2"><i class="fa-regular fa-calendar-days text-blue-500"></i> Prakiraan 5 Hari</h3>
+                    <div id="forecastContainer" class="grid grid-cols-2 md:grid-cols-5 gap-3"></div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-4 space-y-6">
+                <div class="bg-blue-600 dark:bg-blue-700 rounded-3xl shadow-lg p-6 text-white relative overflow-hidden">
+                    <i class="fa-solid fa-map-location-dot absolute -right-4 -bottom-4 text-9xl text-white/10"></i>
+                    <h3 class="font-bold text-lg mb-2">Status & Pengaturan</h3>
+                    <div class="flex items-center gap-2 text-blue-100 text-sm mb-4"><span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span> Sistem Online</div>
+                    <div class="space-y-3 relative z-10">
+                        <div class="bg-white/10 p-3 rounded-xl backdrop-blur-sm flex justify-between items-center"><span class="text-xs opacity-80">Terakhir Update</span><span class="font-mono font-bold text-sm" id="lastUpdated">--:--:--</span></div>
+                        <div class="bg-white/10 p-3 rounded-xl backdrop-blur-sm flex justify-between items-center"><span class="text-xs opacity-80">Interval Update</span><span class="font-mono font-bold text-sm" id="intervalDisplay">5 Menit</span></div>
+                    </div>
+                </div>
+                
+                <div class="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 p-6 relative">
+                    <h3 class="font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+                        <i class="fa-regular fa-sun text-orange-500"></i> Siklus Matahari
+                    </h3>
+                    <div class="flex justify-between items-end mb-1">
+                        <div class="text-center">
+                            <span class="text-xs text-gray-400 block mb-1">Terbit</span>
+                            <span id="sunriseTime" class="font-bold text-gray-800 dark:text-white text-lg">--:--</span>
+                        </div>
+                        <div class="text-center">
+                            <span class="text-xs text-gray-400 block mb-1">Terbenam</span>
+                            <span id="sunsetTime" class="font-bold text-gray-800 dark:text-white text-lg">--:--</span>
+                        </div>
+                    </div>
+                    <div class="relative h-2 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden mt-2">
+                        <div id="sunProgress" class="absolute top-0 left-0 h-full bg-gradient-to-r from-orange-400 to-yellow-500 w-0 transition-all duration-1000"></div>
+                    </div>
+                    <p id="sunStatusText" class="text-xs text-center text-gray-400 mt-2 italic">Siang Hari</p>
+                </div>
+
+                <div class="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 p-6">
+                    <h3 class="font-bold text-gray-800 dark:text-white mb-4">Informasi</h3>
+                    <ul class="space-y-4 text-sm text-gray-600 dark:text-gray-400">
+                        <li class="flex gap-3"><i class="fa-solid fa-circle-info text-blue-500 mt-0.5"></i><span>Nama kota ditampilkan sesuai data stasiun cuaca terdekat.</span></li>
+                        <li class="flex gap-3"><i class="fa-solid fa-check text-blue-500 mt-0.5"></i><span>Pencarian Bandar Lampung dialihkan ke Kotabumi untuk akurasi.</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const regionData = {
+            "DKI Jakarta": ["Jakarta Pusat", "Jakarta Selatan", "Jakarta Barat", "Jakarta Timur", "Jakarta Utara", "Kepulauan Seribu"],
+            "Jawa Barat": ["Bandung", "Bekasi", "Bogor", "Depok", "Cimahi", "Tasikmalaya", "Sukabumi", "Cirebon", "Banjar", "Pangandaran", "Garut", "Subang", "Purwakarta", "Karawang", "Cianjur", "Indramayu", "Majalengka", "Kuningan", "Sumedang"],
+            "Jawa Tengah": ["Semarang", "Surakarta", "Magelang", "Pekalongan", "Salatiga", "Tegal", "Banyumas", "Boyolali", "Brebes", "Cilacap", "Demak", "Grobogan", "Jepara", "Karanganyar", "Kebumen", "Kendal", "Klaten", "Kudus", "Pati", "Purbalingga", "Purworejo", "Rembang", "Sragen", "Sukoharjo", "Temanggung", "Wonogiri", "Wonosobo"],
+            "Jawa Timur": ["Surabaya", "Malang", "Batu", "Blitar", "Kediri", "Madiun", "Mojokerto", "Pasuruan", "Probolinggo", "Banyuwangi", "Bojonegoro", "Bondowoso", "Gresik", "Jember", "Jombang", "Lamongan", "Lumajang", "Magetan", "Nganjuk", "Ngawi", "Pacitan", "Pamekasan", "Ponorogo", "Sampang", "Sidoarjo", "Situbondo", "Sumenep", "Trenggalek", "Tuban", "Tulungagung"],
+            "Banten": ["Serang", "Cilegon", "Tangerang", "Tangerang Selatan", "Pandeglang", "Lebak"],
+            "DIY Yogyakarta": ["Yogyakarta", "Sleman", "Bantul", "Gunung Kidul", "Kulon Progo"],
+            "Bali": ["Denpasar", "Badung", "Bangli", "Buleleng", "Gianyar", "Jembrana", "Karangasem", "Klungkung", "Tabanan"],
+            "Aceh": ["Banda Aceh", "Langsa", "Lhokseumawe", "Sabang", "Subulussalam", "Aceh Barat", "Aceh Besar", "Pidie"],
+            "Sumatera Utara": ["Medan", "Binjai", "Pematangsiantar", "Tebing Tinggi", "Sibolga", "Tanjungbalai", "Deli Serdang", "Langkat", "Karo", "Asahan"],
+            "Sumatera Barat": ["Padang", "Bukittinggi", "Payakumbuh", "Pariaman", "Solok", "Padang Panjang", "Sawahlunto"],
+            "Riau": ["Pekanbaru", "Dumai", "Kampar", "Bengkalis", "Indragiri", "Siak", "Rokan"],
+            "Kepulauan Riau": ["Tanjungpinang", "Batam", "Bintan", "Karimun", "Natuna"],
+            "Jambi": ["Jambi", "Sungai Penuh", "Batanghari", "Bungo", "Kerinci", "Merangin", "Muaro Jambi", "Sarolangun", "Tanjung Jabung", "Tebo"],
+            "Sumatera Selatan": ["Palembang", "Prabumulih", "Pagar Alam", "Lubuklinggau", "Banyuasin", "Empat Lawang", "Lahat", "Muara Enim", "Musi Banyuasin", "Musi Rawas", "Ogan Ilir", "Ogan Komering Ilir", "Ogan Komering Ulu"],
+            "Lampung": ["Bandar Lampung", "Metro", "Lampung Barat", "Lampung Selatan", "Lampung Tengah", "Lampung Timur", "Lampung Utara", "Mesuji", "Pesawaran", "Pringsewu", "Tanggamus", "Tulang Bawang", "Way Kanan"],
+            "Bangka Belitung": ["Pangkal Pinang", "Bangka", "Belitung"],
+            "Bengkulu": ["Bengkulu", "Bengkulu Selatan", "Bengkulu Tengah", "Bengkulu Utara", "Kaur", "Kepahiang", "Lebong", "Mukomuko", "Rejang Lebong", "Seluma"],
+            "Kalimantan Barat": ["Pontianak", "Singkawang", "Sambas", "Mempawah", "Sanggau", "Ketapang", "Sintang", "Kapuas Hulu", "Bengkayang", "Landak", "Sekadau", "Melawi", "Kayong Utara", "Kubu Raya"],
+            "Kalimantan Tengah": ["Palangka Raya", "Kotawaringin", "Kapuas", "Barito"],
+            "Kalimantan Selatan": ["Banjarmasin", "Banjarbaru", "Banjar", "Tabalong", "Tanah Bumbu"],
+            "Kalimantan Timur": ["Samarinda", "Balikpapan", "Bontang", "Kutai", "Berau", "Pajam"],
+            "Kalimantan Utara": ["Tarakan", "Bulungan", "Malinau", "Nunukan"],
+            "Sulawesi Utara": ["Manado", "Bitung", "Tomohon", "Kotamobagu", "Minahasa"],
+            "Sulawesi Tengah": ["Palu", "Poso", "Donggala", "Toli-Toli", "Banggai"],
+            "Sulawesi Selatan": ["Makassar", "Parepare", "Palopo", "Gowa", "Maros", "Bone", "Tana Toraja"],
+            "Sulawesi Tenggara": ["Kendari", "Bau-Bau", "Konawe", "Muna", "Buton", "Wakatobi"],
+            "Gorontalo": ["Gorontalo", "Boalemo", "Bone Bolango"],
+            "Sulawesi Barat": ["Mamuju", "Majene", "Polewali Mandar"],
+            "Maluku": ["Ambon", "Tual", "Maluku Tengah", "Buru"],
+            "Maluku Utara": ["Ternate", "Tidore", "Halmahera"],
+            "Nusa Tenggara Barat": ["Mataram", "Bima", "Lombok", "Sumbawa", "Dompu"],
+            "Nusa Tenggara Timur": ["Kupang", "Flores", "Sikka", "Ende", "Manggarai", "Sumba"],
+            "Papua": ["Jayapura", "Biak", "Sarmi", "Keerom"],
+            "Papua Barat": ["Manokwari", "Sorong", "Fakfak", "Kaimana", "Raja Ampat"]
+        };
+
+        let currentCity = { lat: -6.2088, lon: 106.8456 }; 
+        let isCelsius = true;
+        let updateTimer = null;
+        let updateIntervalMinutes = 5;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTheme();
+            initRegionDropdowns();
+            fetchWeatherData(false); 
+            setUpdateInterval(5);
+        });
+
+        function initRegionDropdowns() {
+            const provSelect = document.getElementById('inputProv');
+            const sortedProv = Object.keys(regionData).sort();
+            sortedProv.forEach(prov => {
+                const opt = document.createElement('option');
+                opt.value = prov;
+                opt.innerText = prov;
+                provSelect.appendChild(opt);
+            });
+        }
+
+        function handleProvinceChange() {
+            const provSelect = document.getElementById('inputProv');
+            const citySelect = document.getElementById('inputCity');
+            const selectedProv = provSelect.value;
+            citySelect.innerHTML = '<option value="">Pilih Kota...</option>';
+            citySelect.disabled = true;
+            citySelect.classList.add('cursor-not-allowed', 'bg-gray-200', 'dark:bg-slate-900');
+            citySelect.classList.remove('bg-white', 'dark:bg-slate-800');
+            if (selectedProv && regionData[selectedProv]) {
+                const cities = regionData[selectedProv].sort();
+                cities.forEach(city => {
+                    const opt = document.createElement('option');
+                    opt.value = city;
+                    opt.innerText = city;
+                    citySelect.appendChild(opt);
+                });
+                citySelect.disabled = false;
+                citySelect.classList.remove('cursor-not-allowed', 'bg-gray-200', 'dark:bg-slate-900');
+                citySelect.classList.add('bg-white', 'dark:bg-slate-800');
+            }
+        }
+
+        function handleSearchRegion() {
+            const prov = document.getElementById('inputProv').value;
+            const city = document.getElementById('inputCity').value;
+            if (!prov || !city) {
+                showError("Mohon pilih Provinsi DAN Kota.");
+                return;
+            }
+            let query = "";
+            if (city === "Bandar Lampung") {
+                query = "Kotabumi, Lampung";
+            } else {
+                query = `${city}, ${prov}`;
+            }
+            searchCityByQuery(query);
+        }
+
+        async function searchCityByQuery(query) {
+            showLoading(true, "Mencari Lokasi...");
+            try {
+                const url = `api.php?type=search&q=${encodeURIComponent(query)}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data && data.length > 0) {
+                    currentCity.lat = data[0].lat;
+                    currentCity.lon = data[0].lon;
+                    fetchWeatherData(false);
+                } else {
+                    showError("Lokasi tidak ditemukan.");
+                    showLoading(false);
+                }
+            } catch (e) {
+                showError("Gagal mencari lokasi.");
+                showLoading(false);
+            }
+        }
+
+        async function fetchWeatherData(silent = false) {
+            if (!silent) showLoading(true, "Update Data...");
+            try {
+                const url = `api.php?type=weather&lat=${currentCity.lat}&lon=${currentCity.lon}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data.cod != 200) throw new Error(data.message || "Gagal load cuaca.");
+                
+                updateUI(data);
+                updateLastUpdatedTime();
+                document.getElementById('errorMsg').classList.add('hidden');
+            } catch (error) {
+                console.error(error);
+                if (!silent) showError("Gagal memuat cuaca.");
+            } finally {
+                if (!silent) showLoading(false);
+            }
+        }
+
+        function updateUI(data) {
+            if(!data.list || data.list.length === 0) return;
+            const current = data.list[0];
+            const weather = current.weather[0];
+
+            document.getElementById('cityName').innerText = data.city.name;
+            const dateObj = new Date(current.dt * 1000);
+            document.getElementById('currentDate').innerText = dateObj.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            document.getElementById('tempValue').innerText = formatTemp(current.main.temp);
+            document.getElementById('weatherDesc').innerText = weather.description;
+            const iconImg = document.getElementById('weatherIcon');
+            iconImg.src = `https://openweathermap.org/img/wn/${weather.icon}@4x.png`;
+            iconImg.classList.remove('hidden');
+            document.getElementById('windSpeed').innerText = `${current.wind.speed} m/s`;
+            document.getElementById('humidity').innerText = `${current.main.humidity}%`;
+            document.getElementById('visibility').innerText = `${(current.visibility / 1000).toFixed(1)} km`;
+
+            generateRecommendation(current.weather[0].id, current.main.temp, current.wind.speed);
+            updateSunCycle(data.city.sunrise, data.city.sunset);
+
+            const container = document.getElementById('forecastContainer');
+            container.innerHTML = '';
+            const dailyData = {};
+            data.list.forEach(item => {
+                const dateTxt = item.dt_txt.split(' ')[0];
+                if (!dailyData[dateTxt] && item.dt_txt.includes("12:00:00")) dailyData[dateTxt] = item;
+                else if (!dailyData[dateTxt]) dailyData[dateTxt] = item;
+            });
+            Object.values(dailyData).slice(0, 5).forEach(day => {
+                const d = new Date(day.dt * 1000);
+                const html = `
+                    <div class="bg-white dark:bg-slate-700/50 border border-gray-100 dark:border-slate-600 p-4 rounded-2xl flex flex-col items-center justify-center text-center shadow-sm hover:scale-105 transition duration-300">
+                        <p class="text-xs font-bold text-gray-400 mb-2 uppercase">${d.toLocaleDateString('id-ID', { weekday: 'short' })}</p>
+                        <img src="https://openweathermap.org/img/wn/${day.weather[0].icon}.png" class="w-12 h-12 mb-2">
+                        <p class="font-bold text-xl text-gray-800 dark:text-white">${formatTemp(day.main.temp)}°</p>
+                    </div>`;
+                container.innerHTML += html;
+            });
+        }
+
+        function generateRecommendation(code, tempKelvin, windSpeed) {
+            let tempC = tempKelvin - 273.15;
+            let icon = "fa-robot";
+            let text = "Cuaca cerah, nikmati harimu!";
+            if (code >= 200 && code < 600) { 
+                icon = "fa-umbrella";
+                text = "Jangan lupa bawa payung atau jas hujan jika ingin keluar.";
+            } else if (tempC > 32) { 
+                icon = "fa-temperature-arrow-up";
+                text = "Suhu sangat panas! Gunakan pakaian tipis dan minum banyak air.";
+            } else if (tempC < 20) { 
+                icon = "fa-vest";
+                text = "Suhu agak dingin. Sebaiknya gunakan jaket atau pakaian hangat.";
+            } else if (windSpeed > 10) { 
+                icon = "fa-wind";
+                text = "Angin kencang hari ini. Hati-hati saat berkendara.";
+            } else if (code === 800) { 
+                icon = "fa-sun";
+                text = "Cuaca cerah sempurna untuk menjemur pakaian atau olahraga.";
+            }
+            document.getElementById('recoIcon').className = `fa-solid ${icon} text-xl`;
+            document.getElementById('recoText').innerText = text;
+        }
+
+        function updateSunCycle(sunrise, sunset) {
+            const sunriseDate = new Date(sunrise * 1000);
+            const sunsetDate = new Date(sunset * 1000);
+            document.getElementById('sunriseTime').innerText = sunriseDate.toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
+            document.getElementById('sunsetTime').innerText = sunsetDate.toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
+            const now = new Date().getTime() / 1000; 
+            let percentage = 0;
+            let status = "Malam Hari";
+            if (now < sunrise) {
+                percentage = 0;
+                status = "Menjelang Pagi";
+            } else if (now > sunset) {
+                percentage = 100;
+                status = "Malam Hari";
+            } else {
+                const totalDay = sunset - sunrise;
+                const elapsed = now - sunrise;
+                percentage = (elapsed / totalDay) * 100;
+                status = "Siang Hari";
+            }
+            document.getElementById('sunProgress').style.width = `${percentage}%`;
+            document.getElementById('sunStatusText').innerText = status;
+        }
+
+        function setUpdateInterval(minutes) {
+            updateIntervalMinutes = minutes;
+            const display = document.getElementById('intervalDisplay');
+            if(minutes == 0) display.innerText = "Manual";
+            else if(minutes < 1) display.innerText = "5 Detik";
+            else display.innerText = `${minutes} Menit`;
+
+            if (updateTimer) clearInterval(updateTimer);
+            if (minutes > 0) {
+                updateTimer = setInterval(() => { 
+                    fetchWeatherData(true); 
+                }, minutes * 60 * 1000);
+            }
+        }
+
+        // --- 3. FITUR VOICE & NOTIFICATION ---
+        function speakWeather() {
+            // Data
+            const city = document.getElementById('cityName').innerText;
+            const desc = document.getElementById('weatherDesc').innerText;
+            const temp = document.getElementById('tempValue').innerText;
+            const reco = document.getElementById('recoText').innerText;
+
+            // Text to Speech
+            const text = `Halo, cuaca di ${city} saat ini ${desc}. Suhu ${temp} derajat celcius. ${reco}`;
+
+            if ('speechSynthesis' in window) {
+                // Hentikan suara sebelumnya jika ada
+                window.speechSynthesis.cancel(); 
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'id-ID'; // Bahasa Indonesia
+                utterance.rate = 1; 
+                utterance.pitch = 1;
+                window.speechSynthesis.speak(utterance);
+            } else {
+                alert("Browser Anda tidak mendukung fitur suara.");
+            }
+
+            // Notification
+            showNotification(`Cuaca ${city}`, `${desc}, ${temp}°C. ${reco}`);
+        }
+
+        function showNotification(title, body) {
+            if (!("Notification" in window)) return;
+            
+            // Cek Izin
+            if (Notification.permission === "granted") {
+                new Notification(title, { 
+                    body: body, 
+                    icon: 'https://cdn-icons-png.flaticon.com/512/4052/4052984.png',
+                    requireInteraction: false 
+                });
+            } else if (Notification.permission !== "denied") {
+                Notification.requestPermission().then(permission => {
+                    if (permission === "granted") {
+                        new Notification(title, { 
+                            body: body, 
+                            icon: 'https://cdn-icons-png.flaticon.com/512/4052/4052984.png' 
+                        });
+                    }
+                });
+            }
+        }
+
+        function manualRefresh() {
+            const icon = document.querySelector('#refreshBtn i');
+            icon.classList.add('fa-spin');
+            fetchWeatherData(true).then(() => setTimeout(() => icon.classList.remove('fa-spin'), 1000));
+        }
+
+        function formatTemp(k) {
+            let t = k - 273.15;
+            if (!isCelsius) t = (t * 9/5) + 32;
+            return Math.round(t);
+        }
+
+        function toggleUnit() {
+            isCelsius = !isCelsius;
+            document.getElementById('unitBtn').innerText = isCelsius ? "°C" : "°F";
+            document.getElementById('tempUnit').innerText = isCelsius ? "°C" : "°F";
+            fetchWeatherData(true);
+        }
+
+        function updateLastUpdatedTime() { document.getElementById('lastUpdated').innerText = new Date().toLocaleTimeString('id-ID'); }
+        function showLoading(show, text="Loading...") { 
+            const el = document.getElementById('loading');
+            el.classList.toggle('hidden', !show);
+            if(show) document.getElementById('loadingText').innerText = text;
+        }
+        function showError(msg) { 
+            document.getElementById('errorText').innerText = msg;
+            document.getElementById('errorMsg').classList.remove('hidden');
+            setTimeout(() => document.getElementById('errorMsg').classList.add('hidden'), 4000);
+        }
+        function toggleTheme() {
+            const html = document.documentElement;
+            html.classList.toggle('dark');
+            localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
+            loadTheme();
+        }
+        function loadTheme() {
+            const theme = localStorage.getItem('theme');
+            const icon = document.getElementById('themeIcon');
+            if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+                icon.className = 'fa-solid fa-sun';
+            } else {
+                document.documentElement.classList.remove('dark');
+                icon.className = 'fa-solid fa-moon';
+            }
+        }
+    </script>
+</body>
+</html>
